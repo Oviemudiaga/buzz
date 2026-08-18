@@ -1,4 +1,4 @@
-import { MessageCircle, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 
@@ -40,6 +40,7 @@ import {
   ProjectsOverviewContextPanel,
   ProjectsOverviewPanel,
 } from "@/features/projects/ui/ProjectsOverviewPanel";
+import { ProjectsOverviewChromeActions } from "@/features/projects/ui/ProjectsOverviewChromeActions";
 import { ProjectContextRail } from "@/features/projects/ui/ProjectContextRail";
 import {
   openAppSearch,
@@ -704,22 +705,31 @@ export function ProjectsView() {
       ) ?? [],
     summaries: activitySummariesQuery.data,
   };
-  const overviewDetached = overviewPanelOpen && !isNarrowProjectsLayout;
   const contextOpen = isNarrowProjectsLayout
     ? narrowContextOpen
     : overviewPanelOpen;
-  const chromeActions = (
-    <>
-      <ProjectsOverviewNarrowContextToggle
-        onToggle={() =>
-          isNarrowProjectsLayout
-            ? setNarrowContextOpen((open) => !open)
-            : setOverviewPanelOpen((open) => !open)
-        }
-        open={contextOpen}
-        ref={contextToggleRef}
-      />
-    </>
+  const overviewChatOpen =
+    selectionAgentContext !== null && !isNarrowProjectsLayout;
+  const overviewContextOpen = overviewPanelOpen && !isNarrowProjectsLayout;
+  const overviewDetached = overviewContextOpen || overviewChatOpen;
+  const chromeActions = isNarrowProjectsLayout ? (
+    <ProjectsOverviewNarrowContextToggle
+      onToggle={() => setNarrowContextOpen((open) => !open)}
+      open={contextOpen}
+      ref={contextToggleRef}
+    />
+  ) : (
+    <ProjectsOverviewChromeActions
+      chatOpen={overviewChatOpen}
+      contextOpen={overviewPanelOpen}
+      onToggleChat={() =>
+        setSelectionAgentContext((context) =>
+          context ? null : overviewAgentContext,
+        )
+      }
+      onToggleContext={() => setOverviewPanelOpen((open) => !open)}
+      sectionTitle={projectsSectionTitle(filter)}
+    />
   );
 
   return (
@@ -841,30 +851,6 @@ export function ProjectsView() {
                           onFilterChange={handleFilterChange}
                         />
                       </div>
-                      <Button
-                        aria-label={`Chat with an agent about ${projectsSectionTitle(filter)}`}
-                        aria-pressed={selectionAgentContext !== null}
-                        className="-mr-2 ml-auto h-7 w-7 shrink-0 text-muted-foreground hover:bg-muted/70 hover:text-foreground"
-                        data-testid="projects-overview-chat-toggle"
-                        onClick={() =>
-                          setSelectionAgentContext((context) =>
-                            context ? null : overviewAgentContext,
-                          )
-                        }
-                        size="icon"
-                        title={`Chat with an agent about ${projectsSectionTitle(filter)}`}
-                        type="button"
-                        variant="ghost"
-                      >
-                        <MessageCircle
-                          className={cn(
-                            "h-4 w-4 transition-opacity duration-200 ease-linear",
-                            selectionAgentContext
-                              ? "opacity-100"
-                              : "opacity-60",
-                          )}
-                        />
-                      </Button>
                     </div>
                     <div
                       className={
@@ -947,20 +933,29 @@ export function ProjectsView() {
                 </div>
               </div>
             </div>
-            {selectionAgentContext && !isNarrowProjectsLayout ? (
-              <ProjectAgentChatPanel
-                canResetWidth={overviewAgentPanelWidth.canReset}
-                context={selectionAgentContext}
-                onClose={() => setSelectionAgentContext(null)}
-                onResetWidth={overviewAgentPanelWidth.onResetWidth}
-                onResizeStart={overviewAgentPanelWidth.onResizeStart}
-                widthPx={overviewAgentPanelWidth.widthPx}
-              />
-            ) : null}
           </div>
         </div>
         <ProjectContextRail
-          open={overviewDetached}
+          open={overviewChatOpen}
+          panelWidthPx={overviewAgentPanelWidth.widthPx}
+          resizing={overviewAgentPanelWidth.isResizing}
+          testId="projects-overview-agent-rail"
+        >
+          {selectionAgentContext ? (
+            <ProjectAgentChatPanel
+              canResetWidth={overviewAgentPanelWidth.canReset}
+              constrainToAvailableSpace={false}
+              context={selectionAgentContext}
+              detached
+              onClose={() => setSelectionAgentContext(null)}
+              onResetWidth={overviewAgentPanelWidth.onResetWidth}
+              onResizeStart={overviewAgentPanelWidth.onResizeStart}
+              widthPx={overviewAgentPanelWidth.widthPx}
+            />
+          ) : null}
+        </ProjectContextRail>
+        <ProjectContextRail
+          open={overviewContextOpen}
           panelWidthPx={PROJECT_CONTEXT_PANEL_DEFAULT_WIDTH_PX}
           testId="projects-overview-context-rail"
         >
